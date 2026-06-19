@@ -1,0 +1,35 @@
+.safety-bar {
+  background: var(--bg);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.safety-bar .app-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.3px;
+}
+.safety-bar .bar-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-crisis, .btn-exit {
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  min-height: 28px;
+  transition: background 0.2s, transform 0.1s;
+}
+.btn-crisis { background: var(--safe); color: white; }
+.btn-crisis:hover { background: var(--safe2); }
+.btn-crisis:active { transform: scale(0.97); }
+.btn-exit { background: #2a2a45; color: #aaa8c4; }
+.btn-exit:hover { background: #363658; color: white; }
+.btn-exit:active { transform: scale(0.97); }

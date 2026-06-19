@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gentle — find your people</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #1a1a2e;
+    --surface:  #f5f0e8;
+    --surface2: #ede8df;
+    --text:     #1e1b2e;
+    --muted:    #6b6680;
+    --accent:   #7ec8a4;
+    --accent2:  #5bb08c;
+    --purple:   #a89bcc;
+    --purple2:  #8e7eb8;
+    --safe:     #e07b6a;
+    --safe2:    #c9614f;
+    --warn-bg:  #fff3f1;
+    --radius:   9999px;
+    --radius-card: 28px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 390px;
+    min-height: 720px;
+    background: var(--surface);
+    border-radius: 44px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 0 8px #2a2a45, 0 40px 80px rgba(0,0,0,0.5);
+  }
+
+  /* Safety bar — always top */
+  .safety-bar {
+    background: var(--bg);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .safety-bar .app-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+  .safety-bar .bar-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-crisis {
+    background: var(--safe);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-crisis:hover { background: var(--safe2); }
+  .btn-crisis:active { transform: scale(0.97); }
+  .btn-exit {
+    background: #2a2a45;
+    color: #aaa8c4;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-exit:hover { background: #363658; color: white; }
+  .btn-exit:active { transform: scale(0.97); }
+
+  /* Screen container */
+  .screens {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 24px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(16px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    overflow-y: auto;
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  /* Typography */
+  .screen-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .screen-sub {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: -12px;
+  }
+
+  /* Step indicator */
+  .steps {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .step-dot {
+    height: 8px;
+    border-radius: var(--radius);
+    background: var(--surface2);
+    transition: width 0.3s ease, background 0.3s ease;
+    width: 8px;
+  }
+  .step-dot.active {
+    width: 24px;
+    background: var(--accent);
+  }
+  .step-dot.done {
+    background: var(--purple);
+  }
+
+  /* Avatar grid */
+  .avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .avatar-option {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.2s, transform 0.15s;
+    background: var(--surface2);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .avatar-option:hover { transform: scale(1.08); }
+  .avatar-option.selected {
+    border-color: var(--accent);
+    background: #e8f7f0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .avatar-option:hover { transform: none; }
+  }
+
+  /* Nickname input */
+  .field-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .rounded-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 2.5px solid transparent;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 13px 20px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .rounded-input:focus {
+    border-color: var(--accent);
+  }
+  .rounded-input::placeholder { color: #b8b4c8; }
+
+  /* Topic chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chip {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chip:hover { background: #e8e3da; }
+  .chip.selected {
+    background: #e8f7f0;
+    color: #3a8c6a;
+    border-color: var(--accent);
+  }
+  .chip.selected-purple {
+    background: #eeebf8;
+    color: #6a5aa0;
+    border-color: var(--purple);
+  }
+
+  /* Match card */
+  .match-card {
+    background: var(--bg);
+    border-radius: var(--radius-card);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .match-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #2a2a45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    animation: breathe 4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .match-avatar { animation: none; }
+  }
+  .match-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+  }
+  .match-anon {
+    font-size: 12px;
+    color: #6b6890;
+    margin-top: 2px;
+  }
+  .shared-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b6890;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .shared-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .shared-chip {
+    background: #2a2a45;
+    color: var(--accent);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 14px;
+  }
+  .match-bio {
+    font-size: 14px;
+    color: #9e9abc;
+    line-height: 1.6;
+    font-style: italic;
+  }
+  .match-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 15px 28px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-height: 52px;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--muted);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-height: 52px;
+  }
+  .btn-secondary:hover { background: #e0dbd2; color: var(--text); }
+  .btn-secondary:active { transform: scale(0.98); }
+
+  .btn-wave {
+    flex: 2;
+    background: var(--purple);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-height: 52px;
+  }
+  .btn-wave:hover { background: var(--purple2); }
+  .btn-wave:active { transform: scale(0.98); }
+
+  .btn-pass {
+    flex: 1;
+    background: #2a2a45;
+    color: #6b6890;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-height: 52px;
+  }
+  .btn-pass:hover { background: #353558; color: #9e9abc; }
+  .btn-pass:active { transform: scale(0.98); }
+
+  .expiry-note {
+    font-size: 12px;
+    color: #6b6890;
+    text-align: center;
+  }
+
+  /* Mood screen */
+  .mood-row {
+    display: flex;
+    gap: 10px;
+  }
+  .mood-btn {
+    flex: 1;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 3px solid transparent;
+    font-size: 26px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mood-btn:hover { transform: scale(1.1); }
+  .mood-btn.selected { border-color: var(--accent); background: #e8f7f0; }
+  @media (prefers-reduced-motion: reduce) {
+    .mood-btn:hover { transform: none; }
+  }
+
+  /* Chat bubbles */
+  .chat-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+  .bubble {
+    max-width: 82%;
+    border-radius: 20px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 500;
+  }
+  .bubble.them {
+    background: var(--surface2);
+    color: var(--text);
+    border-bottom-left-radius: 6px;
+    align-self: flex-start;
+  }
+  .bubble.me {
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 6px;
+    align-self: flex-end;
+  }
+  .ephemeral-note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    margin: 0 auto;
+  }
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: auto;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 2.5px solid transparent;
+    border-radius: var(--radius);
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    padding: 12px 18px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .btn-send {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-send:hover { background: var(--accent2); }
+  .btn-send:active { transform: scale(0.95); }
+  .btn-send svg { width: 20px; height: 20px; fill: white; }
+
+  /* Crisis overlay */
+  .crisis-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(26,26,46,0.92);
+    z-index: 100;
+    border-radius: 44px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    gap: 16px;
+  }
+  .crisis-overlay.open { display: flex; }
+  .crisis-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    text-align: center;
+  }
+  .crisis-sub {
+    font-size: 14px;
+    color: #9e9abc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .crisis-line {
+    width: 100%;
+    background: #2a2a45;
+    border-radius: var(--radius-card);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+    text-align: left;
+  }
+  .crisis-line:hover { background: #353558; }
+  .crisis-line-name { font-size: 15px; font-weight: 700; color: var(--accent); font-family: 'Nunito', sans-serif; }
+  .crisis-line-num { font-size: 18px; font-weight: 700; color: white; font-family: 'Nunito', sans-serif; }
+  .crisis-line-desc { font-size: 12px; color: #6b6890; font-family: 'Nunito', sans-serif; }
+
+  /* Nav bar */
+  .nav-bar {
+    background: var(--bg);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 16px 14px;
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 16px;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn:hover { background: #2a2a45; }
+  .nav-btn.active { background: #2a2a45; }
+  .nav-btn svg { width: 22px; height: 22px; stroke: #6b6890; transition: stroke 0.2s; }
+  .nav-btn.active svg { stroke: var(--accent); }
+  .nav-label { font-size: 10px; font-weight: 700; color: #6b6890; transition: color 0.2s; }
+  .nav-btn.active .nav-label { color: var(--accent); }
+
+  /* Home screen greeting */
+  .greeting-card {
+    background: var(--bg);
+    border-radius: var(--radius-card);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .greeting-hi { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; }
+  .greeting-name { font-size: 22px; font-weight: 700; color: white; }
+  .greeting-q { font-size: 15px; color: #9e9abc; }
+
+  /* Focus visible */
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Always-visible safety bar -->
+  <div class="safety-bar" role="banner">
+    <span class="app-name">gentle</span>
+    <div class="bar-actions">
+      <button class="btn-crisis" onclick="openCrisis()" aria-label="Access crisis support lines">💛 support</button>
+      <button class="btn-exit" onclick="quickExit()" aria-label="Quick exit — close app immediately">exit now</button>
+    </div>
+  </div>
+
+  <!-- Screens -->
+  <div class="screens" role="main">
+
+    <!-- HOME -->
+    <div class="screen active" id="screen-home" aria-label="Home">
+      <div class="greeting-card">
+        <p class="greeting-hi">good morning</p>
+        <p class="greeting-name">GentleFern 🌿</p>
+        <p class="greeting-q">how are you feeling today?</p>
+      </div>
+
+      <div>
+        <p class="field-label">your mood right now</p>
+        <div class="mood-row" role="group" aria-label="Mood selector">
+          <button class="mood-btn" onclick="selectMood(this)" aria-label="Really struggling">😔</button>
+          <button class="mood-btn" onclick="selectMood(this)" aria-label="A bit low">😐</button>
+          <button class="mood-btn selected" onclick="selectMood(this)" aria-label="Okay">🙂</button>
+          <button class="mood-btn" onclick="selectMood(this)" aria-label="Pretty good">😊</button>
+        </div>
+      </div>
+
+      <div>
+        <p class="field-label">today's connection</p>
+        <div class="match-card">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div class="match-avatar">🌊</div>
+            <div>
+              <p class="match-name">QuietTide</p>
+              <p class="match-anon">anonymous until you both connect</p>
+            </div>
+          </div>
+          <div>
+            <p class="shared-label">you both love</p>
+            <div class="shared-chips">
+              <span class="shared-chip">nature</span>
+              <span class="shared-chip">art</span>
+              <span class="shared-chip">parenting</span>
+            </div>
+          </div>
+          <p class="match-bio">"usually quiet in the mornings, likes checking in around midday."</p>
+          <div class="match-actions">
+            <button class="btn-pass" onclick="showScreen('screen-home')" aria-label="Pass on this connection">pass</button>
+            <button class="btn-wave" onclick="sendWave()" aria-label="Wave hello to QuietTide">wave hello 👋</button>
+          </div>
+          <p class="expiry-note">chat opens if they wave back · disappears in 24h</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="screen" id="screen-chat" aria-label="Chat with QuietTide">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2a2a45;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🌊</div>
+        <div>
+          <p style="font-size:16px;font-weight:700;">QuietTide</p>
+          <p style="font-size:12px;color:var(--muted);">anonymous · chat not saved yet</p>
+        </div>
+        <button onclick="showConnect()" style="margin-left:auto;background:var(--accent);color:white;border:none;border-radius:var(--radius);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;" aria-label="Connect and save this chat">connect</button>
+      </div>
+
+      <div class="ephemeral-note" role="note">
+        💭 this chat isn't saved yet — tap connect if you'd like to keep it
+      </div>
+
+      <div class="chat-area" role="log" aria-live="polite" aria-label="Chat messages">
+        <div class="bubble them">hey, rough morning here too. did you manage to get outside at all? 🌿</div>
+        <div class="bubble me">just a short walk but it helped a bit</div>
+        <div class="bubble them">that counts. small steps are real steps 💚</div>
+        <div class="bubble me">thank you, needed to hear that</div>
+      </div>
+
+      <div class="chat-input-row">
+        <input class="chat-input" type="text" placeholder="say something kind..." aria-label="Type a message"/>
+        <button class="btn-send" aria-label="Send message">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 12L22 2L15 22L11 13L2 12Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ONBOARDING STEP 1 — avatar -->
+    <div class="screen" id="screen-avatar" aria-label="Choose your avatar">
+      <div class="steps" aria-label="Step 1 of 3">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <p class="screen-title">pick your avatar 🌱</p>
+      <p class="screen-sub">this is all anyone sees until you both choose to connect.</p>
+
+      <div class="avatar-grid" role="group" aria-label="Avatar options">
+        <button class="avatar-option selected" onclick="selectAvatar(this)" aria-label="Plant" aria-pressed="true">🌿</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Moon" aria-pressed="false">🌙</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Wave" aria-pressed="false">🌊</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Fire" aria-pressed="false">🔥</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Mountain" aria-pressed="false">⛰️</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Blossom" aria-pressed="false">🌸</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Dragon" aria-pressed="false">🐉</button>
+        <button class="avatar-option" onclick="selectAvatar(this)" aria-label="Art" aria-pressed="false">🎨</button>
+      </div>
+
+      <div>
+        <p class="field-label">your nickname</p>
+        <input class="rounded-input" type="text" value="GentleFern" placeholder="choose a nickname" aria-label="Your nickname" maxlength="24"/>
+      </div>
+
+      <button class="btn-primary" onclick="showScreen('screen-topics')" style="width:100%">next →</button>
+    </div>
+
+    <!-- ONBOARDING STEP 2 — topics -->
+    <div class="screen" id="screen-topics" aria-label="Choose comfort topics">
+      <div class="steps" aria-label="Step 2 of 3">
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
+      <p class="screen-title">what brings you comfort? ☁️</p>
+      <p class="screen-sub">pick as many as feel right. we use these to find people who get you.</p>
+
+      <div class="chips" role="group" aria-label="Comfort topics">
+        <button class="chip selected" onclick="toggleChip(this)" aria-pressed="true">nature</button>
+        <button class="chip selected" onclick="toggleChip(this)" aria-pressed="true">art</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">music</button>
+        <button class="chip selected-purple" onclick="toggleChip(this)" aria-pressed="true">parenting</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">gaming</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">cooking</button>
+        <button class="chip selected" onclick="toggleChip(this)" aria-pressed="true">tech</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">reading</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">animals</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">film</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">writing</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">fitness</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">spirituality</button>
+        <button class="chip" onclick="toggleChip(this)" aria-pressed="false">crafts</button>
+      </div>
+
+      <button class="btn-primary" onclick="showScreen('screen-pace')" style="width:100%;margin-top:auto">next →</button>
+    </div>
+
+    <!-- ONBOARDING STEP 3 — pace -->
+    <div class="screen" id="screen-pace" aria-label="Set your pace">
+      <div class="steps" aria-label="Step 3 of 3">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+      </div>
+      <p class="screen-title">how do you like to chat? 💬</p>
+      <p class="screen-sub">no right answer. this helps us match you with someone on the same wavelength.</p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;" role="group" aria-label="Chat pace options">
+        <button class="chip" id="pace1" onclick="selectPace('pace1')" aria-pressed="false" style="text-align:left;border-radius:20px;padding:14px 20px;font-size:15px;">🐢 slow and gentle — a few messages a day</button>
+        <button class="chip selected" id="pace2" onclick="selectPace('pace2')" aria-pressed="true" style="text-align:left;border-radius:20px;padding:14px 20px;font-size:15px;">🌿 whenever feels right — no pressure</button>
+        <button class="chip" id="pace3" onclick="selectPace('pace3')" aria-pressed="false" style="text-align:left;border-radius:20px;padding:14px 20px;font-size:15px;">🌊 flowing — back and forth feels good</button>
+      </div>
+
+      <div style="background:#e8f7f0;border-radius:20px;padding:16px 20px;margin-top:4px;">
+        <p style="font-size:13px;font-weight:700;color:#3a8c6a;margin-bottom:4px;">no read receipts. no online indicators.</p>
+        <p style="font-size:13px;color:#5aaa82;line-height:1.6;">reply when you're ready. gentle never pressures you.</p>
+      </div>
+
+      <button class="btn-primary" onclick="showScreen('screen-home')" style="width:100%;margin-top:auto">let's go 🌱</button>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="screen" id="screen-profile" aria-label="Your profile">
+      <p class="screen-title">your profile</p>
+
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:64px;height:64px;border-radius:50%;background:#e8f7f0;display:flex;align-items:center;justify-content:center;font-size:32px;">🌿</div>
+        <div>
+          <p style="font-size:18px;font-weight:700;">GentleFern</p>
+          <p style="font-size:13px;color:var(--muted);">Hobart · 3 months</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="field-label">your comfort topics</p>
+        <div class="chips">
+          <span class="chip selected" style="cursor:default;">nature</span>
+          <span class="chip selected" style="cursor:default;">art</span>
+          <span class="chip selected-purple" style="cursor:default;">parenting</span>
+          <span class="chip selected" style="cursor:default;">tech</span>
+        </div>
+      </div>
+
+      <div>
+        <p class="field-label">your pace</p>
+        <div style="background:var(--surface2);border-radius:20px;padding:14px 18px;">
+          <p style="font-size:14px;font-weight:600;color:var(--text);">🌿 whenever feels right</p>
+        </div>
+      </div>
+
+      <div style="background:var(--warn-bg);border-radius:20px;padding:16px 20px;border:2px solid #f0c4bc;">
+        <p style="font-size:13px;font-weight:700;color:var(--safe2);margin-bottom:6px;">🛡️ safety & privacy</p>
+        <p style="font-size:13px;color:#b05545;line-height:1.6;margin-bottom:12px;">your real name and photo are never shared unless you choose to reveal them after connecting.</p>
+        <button onclick="openCrisis()" style="width:100%;background:var(--safe);color:white;border:none;border-radius:var(--radius);font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;padding:12px;cursor:pointer;" aria-label="Access support resources">access support resources</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Nav bar -->
+  <nav class="nav-bar" aria-label="Main navigation">
+    <button class="nav-btn active" id="nav-home" onclick="navTo('home')" aria-label="Home" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">home</span>
+    </button>
+    <button class="nav-btn" id="nav-chat" onclick="navTo('chat')" aria-label="Chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="nav-label">chat</span>
+    </button>
+    <button class="nav-btn" id="nav-onboard" onclick="navTo('avatar')" aria-label="Set up profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="nav-label">setup</span>
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="navTo('profile')" aria-label="Profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07M12 2v2m0 18v2M2 12H0m22 0h-2"/></svg>
+      <span class="nav-label">profile</span>
+    </button>
+  </nav>
+
+  <!-- Crisis overlay -->
+  <div class="crisis-overlay" id="crisis-overlay" role="dialog" aria-modal="true" aria-label="Support resources">
+    <p class="crisis-title">you're not alone 💛</p>
+    <p class="crisis-sub">trained humans available 24/7 — free, confidential.</p>
+
+    <a href="tel:131114" class="crisis-line" aria-label="Call Lifeline on 13 11 14">
+      <span class="crisis-line-name">Lifeline</span>
+      <span class="crisis-line-num">13 11 14</span>
+      <span class="crisis-line-desc">24/7 crisis support & suicide prevention</span>
+    </a>
+    <a href="tel:1300224636" class="crisis-line" aria-label="Call Beyond Blue on 1300 22 4636">
+      <span class="crisis-line-name">Beyond Blue</span>
+      <span class="crisis-line-num">1300 22 4636</span>
+      <span class="crisis-line-desc">anxiety, depression & mental wellbeing</span>
+    </a>
+    <a href="tel:1300659467" class="crisis-line" aria-label="Call Suicide Call Back Service on 1300 659 467">
+      <span class="crisis-line-name">Suicide Call Back Service</span>
+      <span class="crisis-line-num">1300 659 467</span>
+      <span class="crisis-line-desc">free professional counselling</span>
+    </a>
+
+    <button class="btn-secondary" onclick="closeCrisis()" style="width:100%;" aria-label="Close support panel">close</button>
+  </div>
+
+</div>
+
+<script>
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function navTo(name) {
+    const map = { home:'screen-home', chat:'screen-chat', avatar:'screen-avatar', profile:'screen-profile' };
+    showScreen(map[name]);
+    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+    const btn = document.getElementById('nav-'+name);
+    if (btn) { btn.classList.add('active'); btn.setAttribute('aria-current','page'); }
+  }
+
+  function selectMood(el) {
+    el.closest('.mood-row').querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function selectAvatar(el) {
+    el.closest('.avatar-grid').querySelectorAll('.avatar-option').forEach(a => {
+      a.classList.remove('selected');
+      a.setAttribute('aria-pressed','false');
+    });
+    el.classList.add('selected');
+    el.setAttribute('aria-pressed','true');
+  }
+
+  function toggleChip(el) {
+    const on = el.classList.contains('selected') || el.classList.contains('selected-purple');
+    el.classList.remove('selected','selected-purple');
+    if (!on) {
+      el.classList.add('selected');
+      el.setAttribute('aria-pressed','true');
+    } else {
+      el.setAttribute('aria-pressed','false');
+    }
+  }
+
+  function selectPace(id) {
+    ['pace1','pace2','pace3'].forEach(p => {
+      const el = document.getElementById(p);
+      el.classList.remove('selected','selected-purple');
+      el.setAttribute('aria-pressed','false');
+    });
+    const el = document.getElementById(id);
+    el.classList.add('selected');
+    el.setAttribute('aria-pressed','true');
+  }
+
+  function sendWave() {
+    showScreen('screen-chat');
+    document.getElementById('nav-home').classList.remove('active');
+    document.getElementById('nav-chat').classList.add('active');
+  }
+
+  function showConnect() {
+    alert('You\'ve chosen to connect 💚\n\nQuietTide will get a gentle notification. If they connect too, your chat will be saved and you can choose to share more about yourselves.');
+  }
+
+  function openCrisis() {
+    document.getElementById('crisis-overlay').classList.add('open');
+    document.getElementById('crisis-overlay').focus();
+  }
+
+  function closeCrisis() {
+    document.getElementById('crisis-overlay').classList.remove('open');
+  }
+
+  function quickExit() {
+    window.location.replace('https://www.bom.gov.au');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCrisis();
+  });
+</script>
+</body>
+</html>
