@@ -12,6 +12,17 @@ const PACES = [
   { id: 'flowing', label: '🌿 whenever feels right — no pressure' },
   { id: 'chatty', label: '🌊 flowing — back and forth feels good' }
 ];
+// Ids must match server/src/db.js DEFAULT_SUPPORT_OPTIONS exactly.
+const SUPPORT_OPTIONS = [
+  'i need someone to listen',
+  'just want some company',
+  'going through a hard time',
+  'feeling really lonely',
+  'dealing with grief or loss',
+  'anxiety has been loud lately',
+  'feeling burnt out',
+  'starting over after something hard'
+];
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -20,12 +31,18 @@ export default function Onboarding() {
   const [topics, setTopics] = useState([]);
   const [bio, setBio] = useState('');
   const [pace, setPace] = useState('flowing');
+  const [supportNeeds, setSupportNeeds] = useState([]);
+  const [supportNote, setSupportNote] = useState('');
   const [error, setError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
   function toggleTopic(t) {
     setTopics((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  }
+
+  function toggleSupportNeed(id) {
+    setSupportNeeds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   async function finish() {
@@ -35,10 +52,11 @@ export default function Onboarding() {
       return;
     }
     try {
-      await register({ nickname: nickname.trim(), avatar, pace, bio, topics });
+      await register({ nickname: nickname.trim(), avatar, pace, bio, topics, supportNeeds, supportNote: supportNote.trim() });
       navigate('/');
-    } catch {
-      setError('something went wrong — please try again');
+    } catch (err) {
+      setError(err.message === "this couldn't be saved" ? "that note couldn't be saved — try rephrasing it" : 'something went wrong — please try again');
+      setStep(2);
     }
   }
 
@@ -46,8 +64,9 @@ export default function Onboarding() {
     <div className="screen">
       {step === 0 && (
         <>
-          <div className="steps" aria-label="Step 1 of 3">
+          <div className="steps" aria-label="Step 1 of 4">
             <div className="step-dot active" />
+            <div className="step-dot" />
             <div className="step-dot" />
             <div className="step-dot" />
           </div>
@@ -104,9 +123,10 @@ export default function Onboarding() {
 
       {step === 1 && (
         <>
-          <div className="steps" aria-label="Step 2 of 3">
+          <div className="steps" aria-label="Step 2 of 4">
             <div className="step-dot done" />
             <div className="step-dot active" />
+            <div className="step-dot" />
             <div className="step-dot" />
           </div>
           <p className="screen-title">what brings you comfort? ☁️</p>
@@ -133,7 +153,53 @@ export default function Onboarding() {
 
       {step === 2 && (
         <>
-          <div className="steps" aria-label="Step 3 of 3">
+          <div className="steps" aria-label="Step 3 of 4">
+            <div className="step-dot done" />
+            <div className="step-dot done" />
+            <div className="step-dot active" />
+            <div className="step-dot" />
+          </div>
+          <p className="screen-title">what's going on for you right now? 💛</p>
+          <p className="screen-sub">totally optional, and only shown to a match for context — pick what fits, or describe it your own way.</p>
+
+          <div className="chips" role="group" aria-label="What kind of support you're looking for">
+            {SUPPORT_OPTIONS.map((s) => (
+              <button
+                key={s}
+                className={`chip${supportNeeds.includes(s) ? ' selected-purple' : ''}`}
+                onClick={() => toggleSupportNeed(s)}
+                aria-pressed={supportNeeds.includes(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label className="field-label" htmlFor="supportNote">or, in your own words (optional)</label>
+            <input
+              id="supportNote"
+              className="rounded-input"
+              type="text"
+              value={supportNote}
+              onChange={(e) => setSupportNote(e.target.value)}
+              placeholder="say as much or as little as you like"
+              maxLength={300}
+            />
+          </div>
+
+          {error && <p style={{ color: 'var(--safe2)', fontSize: 13 }}>{error}</p>}
+
+          <button className="btn-primary" onClick={() => setStep(3)} style={{ marginTop: 'auto' }}>
+            next →
+          </button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <div className="steps" aria-label="Step 4 of 4">
+            <div className="step-dot done" />
             <div className="step-dot done" />
             <div className="step-dot done" />
             <div className="step-dot active" />

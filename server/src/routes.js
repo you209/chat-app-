@@ -10,30 +10,55 @@ const DAY = 24 * 60 * 60;
 const REPORT_WINDOW_DAYS = 7;
 const REPORT_THRESHOLD = 3;
 
+function getSupportNeeds(userId) {
+  return db.prepare('SELECT option_id FROM user_support_needs WHERE user_id = ?').all(userId).map((r) => r.option_id);
+}
+
 function serializeUser(u) {
-  return { id: u.id, nickname: u.nickname, avatar: u.avatar, pace: u.pace, bio: u.bio };
+  return {
+    id: u.id,
+    nickname: u.nickname,
+    avatar: u.avatar,
+    pace: u.pace,
+    bio: u.bio,
+    supportNeeds: getSupportNeeds(u.id),
+    supportNote: u.support_note || ''
+  };
+}
+
+function setSupportNeeds(userId, optionIds) {
+  db.prepare('DELETE FROM user_support_needs WHERE user_id = ?').run(userId);
+  const insert = db.prepare('INSERT OR IGNORE INTO user_support_needs (user_id, option_id) VALUES (?, ?)');
+  for (const id of optionIds) insert.run(userId, id);
 }
 
 // --- Auth / onboarding ---
 
-router.post('/auth/register', (req, res) => {
-  const { nickname, avatar, pace, bio, topics } = req.body;
+router.post('/auth/register', async (req, res) => {
+  const { nickname, avatar, pace, bio, topics, supportNeeds, supportNote } = req.body;
   if (!nickname || !avatar) return res.status(400).json({ error: 'nickname and avatar required' });
+
+  const trimmedNote = (supportNote || '').trim().slice(0, 300);
+  if (trimmedNote) {
+    const moderation = await moderateText(trimmedNote);
+    if (moderation.flagged) return res.status(400).json({ error: "this couldn't be saved" });
+  }
 
   const deviceToken = createDeviceAccount();
   const id = nanoid();
   db.prepare(`
-    INSERT INTO users (id, device_token, nickname, avatar, pace, bio)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, deviceToken, nickname.slice(0, 24), avatar, pace || 'flowing', (bio || '').slice(0, 200));
+    INSERT INTO users (id, device_token, nickname, avatar, pace, bio, support_note)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, deviceToken, nickname.slice(0, 24), avatar, pace || 'flowing', (bio || '').slice(0, 200), trimmedNote);
 
   if (Array.isArray(topics)) {
     const insertTopic = db.prepare('INSERT OR IGNORE INTO user_topics (user_id, topic_id) VALUES (?, ?)');
     for (const t of topics) insertTopic.run(id, t);
   }
+  if (Array.isArray(supportNeeds)) setSupportNeeds(id, supportNeeds);
 
   const sessionToken = issueSessionToken(id);
-  res.json({ deviceToken, sessionToken, user: serializeUser({ id, nickname, avatar, pace, bio }) });
+  res.json({ deviceToken, sessionToken, user: serializeUser({ id, nickname, avatar, pace, bio, support_note: trimmedNote }) });
 });
 
 // Exchange a previously-issued device token for a fresh session JWT
@@ -50,6 +75,10 @@ router.get('/topics', (req, res) => {
   res.json(db.prepare('SELECT id, label FROM topics').all());
 });
 
+router.get('/support-options', (req, res) => {
+  res.json(db.prepare('SELECT id, label FROM support_options').all());
+});
+
 // --- Profile ---
 
 router.get('/me', requireAuth, (req, res) => {
@@ -57,18 +86,30 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ ...serializeUser(req.user), topics });
 });
 
-router.patch('/me', requireAuth, (req, res) => {
-  const { nickname, avatar, pace, bio, topics } = req.body;
+router.patch('/me', requireAuth, async (req, res) => {
+  const { nickname, avatar, pace, bio, topics, supportNeeds, supportNote } = req.body;
+
+  let trimmedNote;
+  if (supportNote !== undefined) {
+    trimmedNote = (supportNote || '').trim().slice(0, 300);
+    if (trimmedNote) {
+      const moderation = await moderateText(trimmedNote);
+      if (moderation.flagged) return res.status(400).json({ error: "this couldn't be saved" });
+    }
+  }
+
   db.prepare(`
     UPDATE users SET nickname = COALESCE(?, nickname), avatar = COALESCE(?, avatar),
-      pace = COALESCE(?, pace), bio = COALESCE(?, bio) WHERE id = ?
-  `).run(nickname?.slice(0, 24), avatar, pace, bio?.slice(0, 200), req.user.id);
+      pace = COALESCE(?, pace), bio = COALESCE(?, bio), support_note = COALESCE(?, support_note) WHERE id = ?
+  `).run(nickname?.slice(0, 24), avatar, pace, bio?.slice(0, 200), trimmedNote, req.user.id);
 
   if (Array.isArray(topics)) {
     db.prepare('DELETE FROM user_topics WHERE user_id = ?').run(req.user.id);
     const insertTopic = db.prepare('INSERT OR IGNORE INTO user_topics (user_id, topic_id) VALUES (?, ?)');
     for (const t of topics) insertTopic.run(req.user.id, t);
   }
+  if (Array.isArray(supportNeeds)) setSupportNeeds(req.user.id, supportNeeds);
+
   res.json({ ok: true });
 });
 

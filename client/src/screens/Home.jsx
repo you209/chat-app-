@@ -96,6 +96,17 @@ export default function Home() {
               </div>
             )}
             {pendingMatch.other.bio && <p className="match-bio">"{pendingMatch.other.bio}"</p>}
+            {(pendingMatch.other.supportNeeds?.length > 0 || pendingMatch.other.supportNote) && (
+              <div>
+                <p className="shared-label">what's on their mind</p>
+                <div className="shared-chips">
+                  {pendingMatch.other.supportNeeds?.map((s) => (
+                    <span key={s} className="shared-chip" style={{ background: 'var(--purple2)' }}>{s}</span>
+                  ))}
+                </div>
+                {pendingMatch.other.supportNote && <p className="match-bio">"{pendingMatch.other.supportNote}"</p>}
+              </div>
+            )}
             <div className="match-actions">
               <button className="btn-pass" onClick={() => pass(pendingMatch.id)} aria-label="Pass on this connection">
                 pass

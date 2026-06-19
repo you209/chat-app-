@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar TEXT NOT NULL,
   pace TEXT NOT NULL DEFAULT 'flowing',
   bio TEXT DEFAULT '',
+  support_note TEXT DEFAULT '',
   real_name TEXT,
   photo_url TEXT,
   status TEXT NOT NULL DEFAULT 'active',
@@ -37,6 +38,19 @@ CREATE TABLE IF NOT EXISTS user_topics (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   PRIMARY KEY (user_id, topic_id)
+);
+
+-- Gentle, non-diagnostic options for "what's going on right now" — shown on
+-- match cards for context only, never used to filter or score matching.
+CREATE TABLE IF NOT EXISTS support_options (
+  id TEXT PRIMARY KEY,
+  label TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_support_needs (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  option_id TEXT NOT NULL REFERENCES support_options(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, option_id)
 );
 
 CREATE TABLE IF NOT EXISTS mood_checkins (
@@ -101,6 +115,12 @@ CREATE INDEX IF NOT EXISTS idx_chat_match ON chat_messages(match_id);
 CREATE INDEX IF NOT EXISTS idx_reports_reported ON reports(reported_id, created_at);
 `);
 
+// Add columns introduced after the initial release to existing databases.
+const userColumns = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+if (!userColumns.includes('support_note')) {
+  db.exec("ALTER TABLE users ADD COLUMN support_note TEXT DEFAULT ''");
+}
+
 const DEFAULT_TOPICS = [
   'nature', 'art', 'music', 'parenting', 'gaming', 'cooking', 'tech',
   'reading', 'animals', 'film', 'writing', 'fitness', 'spirituality', 'crafts'
@@ -109,6 +129,25 @@ const DEFAULT_TOPICS = [
 const insertTopic = db.prepare('INSERT OR IGNORE INTO topics (id, label) VALUES (?, ?)');
 for (const label of DEFAULT_TOPICS) {
   insertTopic.run(label, label);
+}
+
+// Deliberately phrased as feelings/needs, not clinical labels, and framed
+// around what kind of support would help — never a diagnosis.
+const DEFAULT_SUPPORT_OPTIONS = [
+  'i need someone to listen',
+  'just want some company',
+  'going through a hard time',
+  'feeling really lonely',
+  'dealing with grief or loss',
+  'anxiety has been loud lately',
+  'feeling burnt out',
+  'starting over after something hard',
+  'not sure how to put it into words'
+];
+
+const insertSupportOption = db.prepare('INSERT OR IGNORE INTO support_options (id, label) VALUES (?, ?)');
+for (const label of DEFAULT_SUPPORT_OPTIONS) {
+  insertSupportOption.run(label, label);
 }
 
 export default db;

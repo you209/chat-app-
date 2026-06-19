@@ -45,6 +45,7 @@ export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   session: (deviceToken) => request('/auth/session', { method: 'POST', body: { deviceToken } }),
   topics: () => request('/topics'),
+  supportOptions: () => request('/support-options'),
   me: () => request('/me'),
   updateMe: (payload) => request('/me', { method: 'PATCH', body: payload }),
   checkInMood: (mood) => request('/mood', { method: 'POST', body: { mood } }),

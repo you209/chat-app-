@@ -25,8 +25,10 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  async function register({ nickname, avatar, pace, bio, topics }) {
-    const { deviceToken, sessionToken, user } = await api.register({ nickname, avatar, pace, bio, topics });
+  async function register({ nickname, avatar, pace, bio, topics, supportNeeds, supportNote }) {
+    const { deviceToken, sessionToken, user } = await api.register({
+      nickname, avatar, pace, bio, topics, supportNeeds, supportNote
+    });
     await setDeviceToken(deviceToken);
     await setSessionToken(sessionToken);
     setUser(user);
