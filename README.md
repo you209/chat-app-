@@ -67,6 +67,12 @@ A release build additionally requires a signing keystore — see Android's [app 
 
 This repo only contains the Capacitor scaffolding and synced web assets; producing an actual `.apk` requires the Android SDK and Gradle, which must run on a machine (or CI) with the SDK installed.
 
+### Building via GitHub Actions
+
+`.github/workflows/android-apk.yml` builds the debug APK in CI (Ubuntu runner with the Android SDK already installed) and uploads it as a workflow artifact. It runs on pushes to `main` that touch `client/**`, or manually via the Actions tab ("Run workflow").
+
+Before running it, add a repository secret `VITE_API_BASE_URL` set to your deployed backend's URL — without it the native app has no origin to call the API/socket against. After a run finishes, download `gentle-debug-apk` from the workflow run's Artifacts section.
+
 ## Notes
 
 - Auth is device-token based: no email or password is collected. The device token is stored via the storage wrapper in `client/src/lib/storage.js`, which can be swapped for `@capacitor/preferences` when wrapping with Capacitor.
