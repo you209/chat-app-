@@ -3,6 +3,12 @@ import { storage } from './storage';
 const DEVICE_TOKEN_KEY = 'gentle.deviceToken';
 const SESSION_TOKEN_KEY = 'gentle.sessionToken';
 
+// On web, '' resolves relative to the page and goes through Vite's dev
+// proxy (or same-origin in production). The native Android build has no
+// page origin to be relative to, so it needs an absolute backend URL —
+// set VITE_API_BASE_URL at build time before running `npx cap sync`.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 let sessionToken = null;
 
 export async function getDeviceToken() {
@@ -31,7 +37,7 @@ async function request(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined

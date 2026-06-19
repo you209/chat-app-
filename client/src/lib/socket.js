@@ -1,11 +1,11 @@
 import { io } from 'socket.io-client';
-import { getSessionToken } from './api';
+import { getSessionToken, API_BASE_URL } from './api';
 
 let socket = null;
 
 export function getSocket() {
   if (socket) return socket;
-  socket = io({ autoConnect: false, auth: { token: getSessionToken() } });
+  socket = io(API_BASE_URL || undefined, { autoConnect: false, auth: { token: getSessionToken() } });
   return socket;
 }
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gentle</string>
+    <string name="title_activity_main">Gentle</string>
+    <string name="package_name">app.gentle.connect</string>
+    <string name="custom_url_scheme">app.gentle.connect</string>
+</resources>
